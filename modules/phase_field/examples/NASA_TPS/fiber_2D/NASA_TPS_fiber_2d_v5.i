@@ -1,9 +1,11 @@
 [Mesh]
   # length scale -> microns
   type = GeneratedMesh
-  dim = 1
+  dim = 2
   xmax = 100
-  nx = 100
+  nx = 10
+  ymax = 50
+  ny = 5
   uniform_refine = 4
 []
 
@@ -33,7 +35,7 @@
       x1 = 0
       x2 = 50
       y1 = 0
-      y2 = 0
+      y2 = 10
       inside = 0.8
       outside = 1e-3
     [../]
@@ -52,7 +54,7 @@
       x1 = 0
       x2 = 50
       y1 = 0
-      y2 = 0
+      y2 = 10
       inside = 0
       outside = 1
     [../]
@@ -141,7 +143,7 @@
     f_name = f_f
     args = 'c_c'
     constant_names = 'Ef_v kb T'
-    constant_expressions = '4.0 8.6173303e-5 1000.0'
+    constant_expressions = '8.0 8.6173303e-5 1000.0'
     function = 'kb*T*c_c*plog(c_c,1e-4) + (Ef_v*(1-c_c) + kb*T*(1-c_c)*plog((1-c_c), 1e-4))'
     derivative_order = 2
     #outputs = exodus
@@ -205,11 +207,11 @@
     initial_direction = 1
   [../]
 
-  #[./Adaptivity]
-  #  refine_fraction = 0.4
-  #  coarsen_fraction = 0.4
-  #  max_h_level = 5
-  #[../]
+  [./Adaptivity]
+    refine_fraction = 0.5
+    coarsen_fraction = 0.1
+    max_h_level = 6
+  [../]
 
 []
 
@@ -227,7 +229,7 @@
   exodus = true
   csv = true
   print_perf_log = true
-  file_base = ./NASA_TPS_fiber_1d_v5/NASA_TPS_fiber_1d_v5
+  file_base = ./NASA_TPS_fiber_2d_v5/NASA_TPS_fiber_2d_v5
 []
 
 [Debug]

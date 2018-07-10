@@ -2,7 +2,7 @@
   # length scale -> microns
   type = GeneratedMesh
   dim = 1
-  xmax = 100
+  xmax = 200
   nx = 100
   uniform_refine = 4
 []
@@ -31,7 +31,7 @@
     [./InitialCondition]
       type =   BoundingBoxIC
       x1 = 0
-      x2 = 50
+      x2 = 100
       y1 = 0
       y2 = 0
       inside = 0.8
@@ -50,7 +50,7 @@
     [./InitialCondition]
       type = BoundingBoxIC
       x1 = 0
-      x2 = 50
+      x2 = 100
       y1 = 0
       y2 = 0
       inside = 0
@@ -136,13 +136,22 @@
    #function = 'eta*eta*(1.0 -eta)^2.0'
   [../]
 
+  [./form_energy]
+    type = ParsedMaterial
+    f_name = Ef
+    args = 'c_c'
+    function = '8*c_c'
+    outputs = exodus
+  [../]
+
   [./free_energy_f]
     type = DerivativeParsedMaterial
     f_name = f_f
     args = 'c_c'
-    constant_names = 'Ef_v kb T'
-    constant_expressions = '4.0 8.6173303e-5 1000.0'
-    function = 'kb*T*c_c*plog(c_c,1e-4) + (Ef_v*(1-c_c) + kb*T*(1-c_c)*plog((1-c_c), 1e-4))'
+    constant_names = 'kb T'
+    constant_expressions = '8.6173303e-5 1000.0'
+    material_property_names = 'Ef(c_c)'
+    function = 'kb*T*c_c*plog(c_c,1e-4) + (Ef*(1-c_c) + kb*T*(1-c_c)*plog((1-c_c), 1e-4))'
     derivative_order = 2
     #outputs = exodus
   [../]
@@ -227,7 +236,7 @@
   exodus = true
   csv = true
   print_perf_log = true
-  file_base = ./NASA_TPS_fiber_1d_v5/NASA_TPS_fiber_1d_v5
+  file_base = ./NASA_TPS_fiber_1d_v6/NASA_TPS_fiber_1d_v6
 []
 
 [Debug]
