@@ -110,10 +110,21 @@
 
   [./constants_AC]
     type = GenericConstantMaterial
-    prop_names  = 'M kappa_c'
-    prop_values = '0.01 0'
+    prop_names  = 'kappa_c'
+    prop_values = '0'
     #Smaller mob fixed negative composition on gas side
     #Increasing W brought it back, but symetric
+  [../]
+
+  [./mobility]
+    # Mobility of carbon in the bulk and in the gas phase
+    type = DerivativeParsedMaterial
+    f_name = M
+    material_property_names = h(eta)
+    constant_names = 'M_g M_f'
+    constant_expressions = '0.1 0.01'
+    function = 'h * M_g+ (1 - h) * M_f'
+
   [../]
 
   [./switching]
@@ -227,7 +238,7 @@
   exodus = true
   csv = true
   print_perf_log = true
-  file_base = ./NASA_TPS_fiber_1d_v5/NASA_TPS_fiber_1d_v5
+  file_base = ./NASA_TPS_fiber_1d_v8/NASA_TPS_fiber_1d_v8
 []
 
 [Debug]
