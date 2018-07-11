@@ -1,3 +1,10 @@
+###############################################################################
+#                                                                             #
+# Time step adaptivity working fine.
+# Status: Working, small bump on right side that disappears.
+#                                                                             #
+###############################################################################
+
 [Mesh]
   # length scale -> microns
   type = GeneratedMesh

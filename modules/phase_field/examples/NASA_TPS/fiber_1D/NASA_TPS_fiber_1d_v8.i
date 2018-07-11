@@ -1,3 +1,10 @@
+###############################################################################
+#                                                                             #
+# Mobility as a function of eta
+# Status: Profile not stable, needs fixing
+#                                                                             #
+###############################################################################
+
 [Mesh]
   # length scale -> microns
   type = GeneratedMesh

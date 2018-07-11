@@ -1,3 +1,10 @@
+###############################################################################
+#                                                                             #
+# Formation energy as a fucntion of composition.
+# Status: Profile not stable, wiggling a lot.
+#                                                                             #
+###############################################################################
+
 [Mesh]
   # length scale -> microns
   type = GeneratedMesh
