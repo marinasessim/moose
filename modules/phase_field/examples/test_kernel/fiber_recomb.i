@@ -5,6 +5,9 @@
 #                                                                             #
 ###############################################################################
 
+[GlobalParams]
+  penalty = 1e3
+[]
 
 [Mesh]
   # length scale -> microns
@@ -29,9 +32,9 @@
 [AuxKernels]
   [./f_dens]
     type = TotalFreeEnergy
-    interfacial_vars = 'c_c'
+    interfacial_vars = 'c_c c_o'
+    kappa_names = 'kappa_c kappa_o'
     f_name = f_loc
-    kappa_names = 'kappa_c'
     variable = f_dens
     additional_free_energy = cross_energy
   [../]
@@ -41,7 +44,7 @@
     variable = cross_energy
     interfacial_vars = 'eta_c eta_o'
     kappa_names = 'kappa_cc kappa_co
-                   kappa_co kappa_oo '
+                   kappa_co kappa_oo'
   [../]
 []
 
@@ -139,7 +142,7 @@
     type = SplitCHParsed
     variable = c_o
     f_name = f_loc
-    kappa_name = kappa_c
+    kappa_name = kappa_o
     w = w_o
     args = 'eta_c eta_o'
   [../]
@@ -214,8 +217,8 @@
 
   [./constants_CH]
     type = GenericConstantMaterial
-    prop_names  = 'M kappa_c'
-    prop_values = '0.01 0'
+    prop_names  = 'M kappa_c kappa_o'
+    prop_values = '0.01 0 0'
     #Smaller mob fixed negative composition on gas side
     #Increasing W brought it back, but symetric
   [../]
@@ -244,7 +247,6 @@
     h_order =  HIGH
     outputs = exodus
     output_properties = h_o
-
   [../]
 
   [./barrier]
@@ -254,17 +256,16 @@
     g_order = SIMPLE
     outputs = exodus
     output_properties = g
-
   [../]
 
   #Carbon bulk free energy
   [./free_energy_f]
     type = DerivativeParsedMaterial
     f_name = f_f
-    args = 'c_c'
+    args = 'c_c c_o'
     constant_names = 'Ef_v kb T'
     constant_expressions = '4.0 8.6173303e-5 1000.0'
-    function = 'kb*T*c_c*plog(c_c,1e-4) + (Ef_v*(1-c_c) + kb*T*(1-c_c)*plog((1-c_c), 1e-4))'
+    function = 'kb*T*c_c*plog(c_c,1e-4) + (Ef_v*c_o + kb*T*c_o*plog(c_o,1e-4))'
     derivative_order = 2
     #outputs = exodus
   [../]
@@ -286,11 +287,19 @@
     f_name = f_loc
     constant_names = 'W'
     constant_expressions = '20.0'
-    args = 'c_c eta_c eta_o'
-    material_property_names = 'h_c(eta_c) h_o(eta_o) g(eta_c,eta_o) f_g(c_o) f_f(c_c)'
+    args = 'c_c c_o eta_c eta_o'
+    material_property_names = 'h_c(eta_c) h_o(eta_o) g(eta_c) f_g(c_o) f_f(c_c)'
     function = 'h_c * f_g + (1 - h_o) * f_f + W * g'
     derivative_order = 2
     #outputs = exodus
+  [../]
+
+  [./conservation]
+    type = ParsedMaterial
+    args = 'c_c c_o'
+    function = 'c_c + c_o'
+    f_name = mass
+    outputs = exodus
   [../]
 []
 
