@@ -42,7 +42,7 @@
       x2 = 50
       y1 = 0
       y2 = 0
-      inside = 0.8
+      inside = 0.95
       outside = 1e-3
     [../]
   [../]
