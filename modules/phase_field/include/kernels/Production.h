@@ -35,10 +35,14 @@ protected:
   virtual Real computeQpJacobian();
   virtual Real computeQpOffDiagJacobian(unsigned int jvar);
 
-  /// Coupled variable
+  /// Coupled variables
   const VariableName _v_name;
   const VariableValue & _v;
   const unsigned int _v_var;
+
+  const VariableName _w_name;
+  const VariableValue & _w;
+  const unsigned int _w_var;
 
   /// Reaction rate
   const MaterialProperty<Real> & _L;
@@ -48,6 +52,9 @@ protected:
 
   ///  Reaction rate derivative w.r.t. v
   const MaterialProperty<Real> & _dLdv;
+
+  ///  Reaction rate derivative w.r.t. w
+  const MaterialProperty<Real> & _dLdw;
 
   /// number of coupled variables
   const unsigned int _nvar;

@@ -37,28 +37,28 @@
 [AuxKernels]
   [./f_dens_aux]
     type = TotalFreeEnergy
-    interfacial_vars = 'x_C x_O'
-    kappa_names = 'kappa_C kappa_O'
+    interfacial_vars = 'x_C x_O x_CO'
+    kappa_names = 'kappa_C kappa_O kappa_CO'
     f_name = f_loc
     variable = f_dens
   [../]
   [./x_C_aux]
     type = ParsedAux
     variable = x_C
-    function = '1 - x_O'
-    args = 'x_O'
+    function = '1 - x_O - x_CO'
+    args = 'x_O x_CO'
   [../]
   [./x_total_aux]
     type = ParsedAux
     variable = x_total
-    function = 'x_O + x_C'
-    args = 'x_O x_C'
+    function = 'x_O + x_C + x_CO'
+    args = 'x_O x_C x_CO'
   [../]
 []
 
 #------------------------------------------------------------------------------#
 [Variables]
-  # 2 species: Carbon and Oxygen
+  # 3 species: Carbon, Oxygen and Carbon Monoxide (CO)
   # Oxygen
   [./w_O]
     order = FIRST
@@ -75,6 +75,19 @@
         y2 = 0
         inside = 0.02
         outside = 1.0
+      [../]
+    [../]
+
+    [./w_CO]
+      order = FIRST
+      family = LAGRANGE
+    [../]
+    [./x_CO]
+      order = FIRST
+      family = LAGRANGE
+      [./InitialCondition]
+        type = ConstantIC
+        value = 0
       [../]
     [../]
 
@@ -104,7 +117,7 @@
     f_name = f_loc
     kappa_name = kappa_O
     w = w_O
-    args = 'x_C eta'
+    args = 'x_C x_CO eta'
   [../]
   [./w_O_res]
     type = SplitCHWRes
@@ -117,6 +130,43 @@
     v = x_O
   [../]
 
+  # Recombination of C and O
+  [./recomb]
+    type = Recombination
+    variable = x_O
+    v = x_C
+    mob_name = RR
+  [../]
+
+  # Production of CO from C + 0 = CO
+  [./prod]
+    type = Production
+    variable = x_CO
+    v = x_O
+    w = x_C
+    mob_name = RR
+  [../]
+
+  #CO concentration evolution
+  [./x_CO_res]
+    type = SplitCHParsed
+    variable = x_CO
+    f_name = f_loc
+    kappa_name = kappa_CO
+    w = w_CO
+    args = 'x_C x_O eta'
+  [../]
+  [./w_CO_res]
+    type = SplitCHWRes
+    variable = w_CO
+    mob_name = M_CO
+  [../]
+  [./time_CO]
+    type = CoupledTimeDerivative
+    variable = w_CO
+    v = x_CO
+  [../]
+
   #Order parameter
   [./deta_dt]
     type = TimeDerivative
@@ -125,7 +175,7 @@
   [./ACBulk]
     type = AllenCahn
     variable = eta
-    args = 'x_O'
+    args = x_O
     f_name = f_loc
     mob_name = L
   [../]
@@ -134,16 +184,7 @@
     variable = eta
     kappa_name = kappa_eta
   [../]
-
-  # Recombination of C and O
-  [./recomb]
-    type = Recombination
-    variable = x_O
-    v = x_C
-    mob_name = RR
-  [../]
 []
-
 
 #------------------------------------------------------------------------------#
 [Materials]
@@ -159,12 +200,16 @@
     prop_values = '1 2'
   [../]
 
-  [./constants_CH]
+  [./kappa_CH]
     type = GenericConstantMaterial
-    prop_names  = 'M_C M_O kappa_C kappa_O'
-    prop_values = '0.01 0.01 0 0'
-    #Smaller mob fixed negative composition on gas side
-    #Increasing W brought it back, but symetric
+    prop_names  = 'kappa_C kappa_O kappa_CO'
+    prop_values = '0 0 0'
+  [../]
+
+  [./mobility_CH]
+    type = GenericConstantMaterial
+    prop_names  = 'M_C M_O M_CO'
+    prop_values = '0.01 0.01 0.01'
   [../]
 
   [./switching]
@@ -189,10 +234,10 @@
   [./free_energy_f]
     type = DerivativeParsedMaterial
     f_name = f_f
-    args = 'x_C x_O'
+    args = 'x_C x_O x_CO'
     constant_names = 'Ef_v kb T'
     constant_expressions = '4.0 8.6173303e-5 1000.0'
-    function = 'kb*T*x_C*plog(x_C,1e-4) + (Ef_v*x_O + kb*T*x_O*plog(x_O,1e-4))'
+    function = 'kb*T*x_C*plog(x_C,1e-4) + (Ef_v*x_O + kb*T*x_O*plog(x_O,1e-4)) + (Ef_v*x_CO + kb*T*x_CO*plog(x_CO,1e-4))'
     derivative_order = 2
     #outputs = exodus
   [../]
@@ -201,10 +246,10 @@
   [./free_energy_g]
     type = DerivativeParsedMaterial
     f_name = f_g
-    args = 'x_O'
+    args = 'x_O x_CO'
     constant_names = 'A'
     constant_expressions = '1.0'
-    function = 'A/2.0*((1-x_O)^2)'
+    function = 'A/2.0*((1-x_O-x_CO)^2)'
     derivative_order = 2
     #outputs = exodus
   [../]
@@ -215,8 +260,8 @@
     f_name = f_loc
     constant_names = 'W'
     constant_expressions = '20.0'
-    args = 'x_C x_O eta'
-    material_property_names = 'h(eta) g(eta) f_g(x_O) f_f(x_C,x_O)'
+    args = 'x_C x_O x_CO eta'
+    material_property_names = 'h(eta) g(eta) f_g(x_O) f_f(x_C,x_O,x_CO)'
     function = 'h * f_g + (1 - h) * f_f + W * g'
     derivative_order = 2
     #outputs = exodus
@@ -268,6 +313,22 @@
     type = ElementIntegralVariablePostprocessor
     variable = f_dens
   [../]
+  [./total_O]
+    type = ElementIntegralVariablePostprocessor
+    variable = x_O
+  [../]
+  [./total_C]
+    type = ElementIntegralVariablePostprocessor
+    variable = x_C
+  [../]
+  [./total_CO]
+    type = ElementIntegralVariablePostprocessor
+    variable = x_CO
+  [../]
+  [./total_x]
+    type = ElementIntegralVariablePostprocessor
+    variable = x_total
+  [../]
   [./dt]
     type = TimestepSize
   [../]
@@ -277,7 +338,7 @@
 [Outputs]
   exodus = true
   csv = true
-  print_perf_log = true
+  perf_graph = true
 []
 
 #------------------------------------------------------------------------------#
