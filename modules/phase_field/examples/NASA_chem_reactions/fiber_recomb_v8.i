@@ -1,8 +1,8 @@
 #------------------------------------------------------------------------------#
-# 3 elements: carbon, oxygen and vacancies
+# 3 elements: carbon, oxygen and "vacancies"
 # 2 phases: solid and gas
 # Evolution kernels on oxygen and carbon variables
-# Status: running
+# Status: running but recombination kernel is not working
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -78,23 +78,23 @@
           x2 = 50
           y1 = 0
           y2 = 0
-          inside = 0.95
+          inside = 1.0
           outside = 0.0
         [../]
       [../]
 
-#    [./w_CO]
-#      order = FIRST
-#      family = LAGRANGE
-#    [../]
-#    [./x_CO]
-#      order = FIRST
-#      family = LAGRANGE
-#      [./InitialCondition]
-#        type = ConstantIC
-#        value = 0
-#      [../]
-#    [../]
+   # [./w_CO]
+   #    order = FIRST
+   #   family = LAGRANGE
+   # [../]
+   # [./x_CO]
+   #   order = FIRST
+   #   family = LAGRANGE
+   #   [./InitialCondition]
+   #     type = ConstantIC
+   #     value = 0
+   #   [../]
+   # [../]
 
   # 2 phases: solid and gas
   [./eta]
@@ -132,13 +132,6 @@
     variable = w_O
     v = x_O
   [../]
-  # Recombination of O and C
-#  [./recomb_OC]
-#    type = Recombination
-#    variable = x_O
-#    v = x_C
-#    mob_name = RR
-#  [../]
 
   # Carbon concentration evolution
   [./x_C_res]
@@ -159,13 +152,23 @@
     variable = w_C
     v = x_C
   [../]
+
+  #Recombination of O and C
+  [./recomb_OC]
+    type = Recombination
+    variable = x_O
+    v = x_C
+    mob_name = RR
+    implicit = true
+  [../]
   # Recombination of C and O
-#  [./recomb_CO]
-#    type = Recombination
-#    variable = x_C
-#    v = x_O
-#    mob_name = RR
-#  [../]
+  [./recomb_CO]
+    type = Recombination
+    variable = x_C
+    v = x_O
+    mob_name = RR
+    implicit = true
+  [../]
 
   # Production of CO from C + 0 = CO
   #[./prod]
@@ -218,10 +221,18 @@
 #------------------------------------------------------------------------------#
 [Materials]
   [./reation_rate]
-    type = GenericConstantMaterial
-    prop_names = 'RR'
-    prop_values = '1'
+    type = DerivativeParsedMaterial
+    f_name = RR
+    args = 'x_O x_C'
+    function = 'x_C*x_O'
+    derivative_order = 2
   [../]
+
+  # [./reaction_rate]
+  #   type = GenericConstantMaterial
+  #   prop_names  = 'RR'
+  #   prop_values = '0'
+  # [../]
 
   [./constants_AC]
     type = GenericConstantMaterial
@@ -345,7 +356,8 @@
 [Executioner]
   type = Transient
   scheme = 'bdf2'
-  solve_type = 'NEWTON'
+  #scheme = explicit-euler
+  solve_type = NEWTON
   #petsc_options_iname = '-pc_type -sub_pc_type'
   #petsc_options_value = 'asm lu'
   petsc_options_iname = '-pc_type'

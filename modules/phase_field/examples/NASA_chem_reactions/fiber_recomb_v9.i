@@ -1,8 +1,8 @@
 #------------------------------------------------------------------------------#
-# 3 elements: carbon, oxygen and vacancies
+# 3 elements: carbon, oxygen, co and "vacancies"
 # 2 phases: solid and gas
-# Evolution kernels on oxygen and carbon variables
-# Status: running
+# Evolution kernels on o, c and co
+# Status:
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -10,8 +10,8 @@
   # length scale -> microns
   type = GeneratedMesh
   dim = 1
-  xmax = 100
-  nx = 100
+  xmax = 10
+  nx = 20
   uniform_refine = 4
 []
 
@@ -60,7 +60,7 @@
       [./InitialCondition]
         type = BoundingBoxIC
         x1 = 0
-        x2 = 50
+        x2 = 5
         y1 = 0
         y2 = 0
         inside = 0.0
@@ -75,26 +75,22 @@
         [./InitialCondition]
           type = BoundingBoxIC
           x1 = 0
-          x2 = 50
+          x2 = 5
           y1 = 0
           y2 = 0
-          inside = 0.95
+          inside = 1.0
           outside = 0.0
         [../]
       [../]
 
-#    [./w_CO]
-#      order = FIRST
-#      family = LAGRANGE
-#    [../]
-#    [./x_CO]
-#      order = FIRST
-#      family = LAGRANGE
-#      [./InitialCondition]
-#        type = ConstantIC
-#        value = 0
-#      [../]
-#    [../]
+    [./w_CO]
+    [../]
+    [./x_CO]
+      [./InitialCondition]
+        type = ConstantIC
+        value = 0
+      [../]
+    [../]
 
   # 2 phases: solid and gas
   [./eta]
@@ -102,7 +98,7 @@
     [./InitialCondition]
       type = BoundingBoxIC
       x1 = 0
-      x2 = 50
+      x2 = 5
       y1 = 0
       y2 = 0
       inside = 0.0
@@ -120,7 +116,7 @@
     f_name = f_loc
     kappa_name = kappa_O
     w = w_O
-    args = 'x_C eta'
+    args = 'x_C x_CO eta'
   [../]
   [./w_O_res]
     type = SplitCHWRes
@@ -132,13 +128,6 @@
     variable = w_O
     v = x_O
   [../]
-  # Recombination of O and C
-#  [./recomb_OC]
-#    type = Recombination
-#    variable = x_O
-#    v = x_C
-#    mob_name = RR
-#  [../]
 
   # Carbon concentration evolution
   [./x_C_res]
@@ -147,7 +136,7 @@
     f_name = f_loc
     kappa_name = kappa_C
     w = w_C
-    args = 'x_O eta'
+    args = 'x_O x_CO eta'
   [../]
   [./w_C_res]
     type = SplitCHWRes
@@ -159,42 +148,52 @@
     variable = w_C
     v = x_C
   [../]
-  # Recombination of C and O
-#  [./recomb_CO]
-#    type = Recombination
-#    variable = x_C
-#    v = x_O
-#    mob_name = RR
-#  [../]
+
+  #Recombination of O and C
+  # [./recomb_OC]
+  #   type = Recombination
+  #   variable = x_O
+  #   v = x_C
+  #   mob_name = RR
+  #   implicit = true
+  # [../]
+  # # Recombination of C and O
+  # [./recomb_CO]
+  #   type = Recombination
+  #   variable = x_C
+  #   v = x_O
+  #   mob_name = RR
+  #   implicit = true
+  # [../]
 
   # Production of CO from C + 0 = CO
-  #[./prod]
-  #  type = Production
-  #  variable = x_CO
-  #  v = x_O
-  #  w = x_C
-  #  mob_name = RR
-  #[../]
+  [./prod]
+   type = Production
+   variable = x_CO
+   v = x_O
+   w = x_C
+   mob_name = RR
+  [../]
 
   #CO concentration evolution
-  #[./x_CO_res]
-  #  type = SplitCHParsed
-  #  variable = x_CO
-  #  f_name = f_loc
-  #  kappa_name = kappa_CO
-  #  w = w_CO
-  #  args = 'x_C x_O x_V eta'
-  #[../]
-  #[./w_CO_res]
-  #  type = SplitCHWRes
-  #  variable = w_CO
-  #  mob_name = M_CO
-  #[../]
-  #[./time_CO]
-  #  type = CoupledTimeDerivative
-  #  variable = w_CO
-  #  v = x_CO
-  #[../]
+  [./x_CO_res]
+   type = SplitCHParsed
+   variable = x_CO
+   f_name = f_loc
+   kappa_name = kappa_CO
+   w = w_CO
+   args = 'x_C x_O eta'
+  [../]
+  [./w_CO_res]
+   type = SplitCHWRes
+   variable = w_CO
+   mob_name = M_CO
+  [../]
+  [./time_CO]
+   type = CoupledTimeDerivative
+   variable = w_CO
+   v = x_CO
+  [../]
 
   #Order parameter
   [./deta_dt]
@@ -204,7 +203,7 @@
   [./ACBulk]
     type = AllenCahn
     variable = eta
-    args = 'x_O x_C'
+    args = 'x_O x_C x_CO'
     f_name = f_loc
     mob_name = L
   [../]
@@ -218,9 +217,17 @@
 #------------------------------------------------------------------------------#
 [Materials]
   [./reation_rate]
-    type = GenericConstantMaterial
-    prop_names = 'RR'
-    prop_values = '1'
+    type = DerivativeParsedMaterial
+    f_name = RR
+    #args = 'T'
+    constant_names = 'A B E_R T conv'
+    constant_expressions = '3.3 -3.1 2114 7000 1e24'
+    function = 'conv*A*T^B*exp(E_R/T)'
+    # 5.3687e-12
+    # cm^6 mol^-2 s^-1
+    # converted to micron^6 mol^-2 s^-1
+    #Data from National Bureau of Standards
+    derivative_order = 1
   [../]
 
   [./constants_AC]
@@ -246,6 +253,17 @@
     output_properties = M_O
   [../]
 
+  [./mobility_CO]
+    type = DerivativeParsedMaterial
+    f_name = M_CO
+    material_property_names = h(eta)
+    constant_names = 'M_g M_f'
+    constant_expressions = '1 1'
+    function = 'h * M_g+ (1 - h) * M_f'
+    outputs = exodus
+    output_properties = M_CO
+  [../]
+
   [./mobility_C]
     type = DerivativeParsedMaterial
     f_name = M_C
@@ -256,18 +274,6 @@
     outputs = exodus
     output_properties = M_C
   [../]
-
-  [./mobility_CO]
-    type = DerivativeParsedMaterial
-    f_name = M_CO
-    material_property_names = h(eta)
-    constant_names = 'M_g M_f'
-    constant_expressions = '0.01 0.01'
-    function = 'h * M_g+ (1 - h) * M_f'
-    outputs = exodus
-    output_properties = M_CO
-  [../]
-
 
   [./switching]
     type = SwitchingFunctionMaterial
@@ -291,10 +297,12 @@
   [./free_energy_f]
     type = DerivativeParsedMaterial
     f_name = f_f
-    args = 'x_C x_O'
+    args = 'x_C x_O x_CO'
     constant_names = 'Ef_v kb T'
     constant_expressions = '4.0 8.6173303e-5 1000.0'
-    function = 'kb*T*x_C*plog(x_C,1e-4) +(Ef_v*(1-x_C) + kb*T*(1-x_C)*plog(1-x_C,1e-4)) +(Ef_v*x_O + kb*T*x_O*plog(x_O,1e-4))'
+    function = 'kb*T*x_C*plog(x_C,1e-4)+(Ef_v*(1-x_C)+kb*T*(1-x_C)*plog(1-x_C,1e-4))
+    +(Ef_v*x_O+kb*T*x_O*plog(x_O,1e-4))
+    +(Ef_v*x_CO+kb*T*x_CO*plog(x_CO,1e-4))'
     derivative_order = 2
     #outputs = exodus
   [../]
@@ -317,8 +325,8 @@
     f_name = f_loc
     constant_names = 'W'
     constant_expressions = '1.0' #10 for Ef_v 4 20 for Ef_v 8
-    args = 'x_C x_O eta'
-    material_property_names = 'h(eta) g(eta) f_g(x_O,x_C) f_f(x_C,x_O)'
+    args = 'x_C x_O x_CO eta'
+    material_property_names = 'h(eta) g(eta) f_g(x_O,x_C) f_f(x_C,x_O,x_CO)'
     function = 'h * f_g + (1 - h) * f_f + W * g'
     derivative_order = 2
     #outputs = exodus
@@ -345,7 +353,8 @@
 [Executioner]
   type = Transient
   scheme = 'bdf2'
-  solve_type = 'NEWTON'
+  #scheme = explicit-euler
+  solve_type = NEWTON
   #petsc_options_iname = '-pc_type -sub_pc_type'
   #petsc_options_value = 'asm lu'
   petsc_options_iname = '-pc_type'
@@ -386,10 +395,10 @@
     type = ElementIntegralVariablePostprocessor
     variable = x_C
   [../]
-  #[./total_CO]
-  #  type = ElementIntegralVariablePostprocessor
-  #  variable = x_CO
-  #[../]
+  [./total_CO]
+   type = ElementIntegralVariablePostprocessor
+   variable = x_CO
+  [../]
   [./total_x]
     type = ElementIntegralVariablePostprocessor
     variable = x_total
