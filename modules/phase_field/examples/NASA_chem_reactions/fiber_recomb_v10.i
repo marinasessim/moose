@@ -10,9 +10,8 @@
   # length scale -> microns
   type = GeneratedMesh
   dim = 1
-  xmax = 100
-  nx = 100
-  uniform_refine = 4
+  xmax = 10
+  nx = 1000
 []
 
 #------------------------------------------------------------------------------#
@@ -52,30 +51,57 @@
 []
 
 #------------------------------------------------------------------------------#
+[Modules]
+  [./PhaseField]
+    [./Conserved]
+      [./x_C]
+        solve_type = FORWARD_SPLIT
+        kappa = kappa_C
+        free_energy = f_loc
+        mobility = M_C
+        args = 'x_O eta'
+      [../]
+      [./x_O]
+        solve_type = FORWARD_SPLIT
+        kappa = kappa_O
+        free_energy = f_loc
+        mobility = M_O
+        args = 'x_C eta'
+      [../]
+    [../]
+
+    [./Nonconserved]
+      [./eta]
+        kappa = kappa_eta
+        mobility = L
+        free_energy = f_loc
+        args = 'x_C x_O'
+      [../]
+    [../]
+  [../]
+[]
+
+#------------------------------------------------------------------------------#
 [Variables]
   # Oxygen
-  [./w_O]
-  [../]
     [./x_O]
       [./InitialCondition]
         type = BoundingBoxIC
         x1 = 0
-        x2 = 50
+        x2 = 5
         y1 = 0
         y2 = 0
         inside = 0.0
-        outside = 1.0
+        outside = 0.90
       [../]
     [../]
 
     # Carbon
-    [./w_C]
-    [../]
       [./x_C]
         [./InitialCondition]
           type = BoundingBoxIC
           x1 = 0
-          x2 = 50
+          x2 = 5
           y1 = 0
           y2 = 0
           inside = 1.0
@@ -83,26 +109,11 @@
         [../]
       [../]
 
-   # [./w_CO]
-   #    order = FIRST
-   #   family = LAGRANGE
-   # [../]
-   # [./x_CO]
-   #   order = FIRST
-   #   family = LAGRANGE
-   #   [./InitialCondition]
-   #     type = ConstantIC
-   #     value = 0
-   #   [../]
-   # [../]
-
-  # 2 phases: solid and gas
   [./eta]
-    # eta tracks gas phase because of switching function material presets
     [./InitialCondition]
       type = BoundingBoxIC
       x1 = 0
-      x2 = 50
+      x2 = 5
       y1 = 0
       y2 = 0
       inside = 0.0
@@ -113,54 +124,6 @@
 
 #------------------------------------------------------------------------------#
 [Kernels]
-  #Oxygen concentration evolution
-  [./x_O_res]
-    type = SplitCHParsed
-    variable = x_O
-    f_name = f_loc
-    kappa_name = kappa_O
-    w = w_O
-    args = 'x_C eta'
-  [../]
-  [./w_O_res]
-    type = SplitCHWRes
-    variable = w_O
-    mob_name = M_O
-  [../]
-  [./time_O]
-    type = CoupledTimeDerivative
-    variable = w_O
-    v = x_O
-  [../]
-
-  # Carbon concentration evolution
-  [./x_C_res]
-    type = SplitCHParsed
-    variable = x_C
-    f_name = f_loc
-    kappa_name = kappa_C
-    w = w_C
-    args = 'x_O eta'
-  [../]
-  [./w_C_res]
-    type = SplitCHWRes
-    variable = w_C
-    mob_name = M_C
-  [../]
-  [./time_C]
-    type = CoupledTimeDerivative
-    variable = w_C
-    v = x_C
-  [../]
-
-  #Recombination of O and C
-  # [./recomb_OC]
-  #   type = Recombination
-  #   variable = x_O
-  #   v = x_C
-  #   mob_name = RR
-  #   implicit = true
-  # [../]
   # Recombination of C and O
   [./recomb_CO]
     type = Recombination
@@ -168,53 +131,6 @@
     v = x_O
     mob_name = RR
     implicit = true
-  [../]
-
-  # Production of CO from C + 0 = CO
-  #[./prod]
-  #  type = Production
-  #  variable = x_CO
-  #  v = x_O
-  #  w = x_C
-  #  mob_name = RR
-  #[../]
-
-  #CO concentration evolution
-  #[./x_CO_res]
-  #  type = SplitCHParsed
-  #  variable = x_CO
-  #  f_name = f_loc
-  #  kappa_name = kappa_CO
-  #  w = w_CO
-  #  args = 'x_C x_O x_V eta'
-  #[../]
-  #[./w_CO_res]
-  #  type = SplitCHWRes
-  #  variable = w_CO
-  #  mob_name = M_CO
-  #[../]
-  #[./time_CO]
-  #  type = CoupledTimeDerivative
-  #  variable = w_CO
-  #  v = x_CO
-  #[../]
-
-  #Order parameter
-  [./deta_dt]
-    type = TimeDerivative
-    variable = eta
-  [../]
-  [./ACBulk]
-    type = AllenCahn
-    variable = eta
-    args = 'x_O x_C'
-    f_name = f_loc
-    mob_name = L
-  [../]
-  [./ACInterface]
-    type = ACInterface
-    variable = eta
-    kappa_name = kappa_eta
   [../]
 []
 
@@ -227,12 +143,6 @@
     function = '1'
     derivative_order = 1
   [../]
-
-  # [./reaction_rate]
-  #   type = GenericConstantMaterial
-  #   prop_names  = 'RR'
-  #   prop_values = '0'
-  # [../]
 
   [./constants_AC]
     type = GenericConstantMaterial
@@ -267,18 +177,6 @@
     outputs = exodus
     output_properties = M_C
   [../]
-
-  [./mobility_CO]
-    type = DerivativeParsedMaterial
-    f_name = M_CO
-    material_property_names = h(eta)
-    constant_names = 'M_g M_f'
-    constant_expressions = '0.01 0.01'
-    function = 'h * M_g+ (1 - h) * M_f'
-    outputs = exodus
-    output_properties = M_CO
-  [../]
-
 
   [./switching]
     type = SwitchingFunctionMaterial
@@ -355,8 +253,7 @@
 #------------------------------------------------------------------------------#
 [Executioner]
   type = Transient
-  scheme =
-  #scheme = explicit-euler
+  scheme = 'bdf2'
   solve_type = NEWTON
   #petsc_options_iname = '-pc_type -sub_pc_type'
   #petsc_options_value = 'asm lu'
@@ -372,14 +269,14 @@
   start_time = 0.0
 
   dtmax = 10
-  dtmin = 1e-9
+  dtmin = 1e-12
 
   #end_time = 100
 
   [./TimeStepper]
     type = SolutionTimeAdaptiveDT
     percent_change = 0.1
-    dt = 1e-3
+    dt = 1e-6
     initial_direction = 1
   [../]
 []
@@ -398,10 +295,6 @@
     type = ElementIntegralVariablePostprocessor
     variable = x_C
   [../]
-  #[./total_CO]
-  #  type = ElementIntegralVariablePostprocessor
-  #  variable = x_CO
-  #[../]
   [./total_x]
     type = ElementIntegralVariablePostprocessor
     variable = x_total
