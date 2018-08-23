@@ -54,13 +54,13 @@ Production::initialSetup()
 Real
 Production::computeQpResidual()
 {
-  return _L[_qp] * _test[_i][_qp] * _v[_qp] * _w[_qp];
+  return -_L[_qp] * _test[_i][_qp] * _v[_qp] * _w[_qp];
 }
 
 Real
 Production::computeQpJacobian()
 {
-  return _dLdu[_qp] * _v[_qp] * _w[_qp] * _phi[_j][_qp]  * _test[_i][_qp];
+  return -_dLdu[_qp] * _v[_qp] * _w[_qp] * _phi[_j][_qp]  * _test[_i][_qp];
 }
 
 Real
@@ -70,10 +70,10 @@ Production::computeQpOffDiagJacobian(unsigned int jvar)
   // the first term in the sum just multiplies by L which is always needed
   // the second term accounts for cases where L depends on v
   if (jvar == _v_var)
-    return (_L[_qp] + _dLdv[_qp] * _v[_qp]) * _w[_qp] * _phi[_j][_qp] * _test[_i][_qp];
+    return -(_L[_qp] + _dLdv[_qp] * _v[_qp]) * _w[_qp] * _phi[_j][_qp] * _test[_i][_qp];
 
   if (jvar == _w_var)
-    return (_L[_qp] + _dLdw[_qp] * _w[_qp]) * _v[_qp] * _phi[_j][_qp] * _test[_i][_qp];
+    return -(_L[_qp] + _dLdw[_qp] * _w[_qp]) * _v[_qp] * _phi[_j][_qp] * _test[_i][_qp];
 
   //  for all other vars get the coupled variable jvar is referring to
   const unsigned int cvar = mapJvarToCvar(jvar);

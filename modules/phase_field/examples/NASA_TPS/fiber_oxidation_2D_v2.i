@@ -17,6 +17,7 @@
   uniform_refine = 2
 []
 
+#------------------------------------------------------------------------------#
 [GlobalParams]
   x1 = 0
   x2 = 4.0
@@ -151,7 +152,6 @@
     w = x_O
     mob_name = R_prod
   [../]
-
 []
 
 #------------------------------------------------------------------------------#
@@ -160,14 +160,15 @@
     type = DerivativeParsedMaterial
     f_name = R_recomb
     args = 'x_O x_C'
-    function = 'if(x_O<0.0,0,if(x_C<0.0,0,-15))' #RR= -10
+    function = 'if(x_O<0.0,0,if(x_C<0.0,0,-15))'
     derivative_order = 1
     outputs = exodus
   [../]
   [./reation_rate_prod]
     type = DerivativeParsedMaterial
     f_name = R_prod
-    function = '150' #RR= -10
+    args = 'x_O x_C'
+    function = 'if(x_O<0.0,0,if(x_C<0.0,0,15))'
     derivative_order = 1
     outputs = exodus
   [../]
@@ -221,10 +222,13 @@
   [./free_energy_f]
     type = DerivativeParsedMaterial
     f_name = f_f
-    args = 'x_C x_O'
+    args = 'x_C x_O x_CO'
     constant_names = 'Ef_v kb T tol'
     constant_expressions = '4.0 8.6173303e-5 1000.0 1e-4'
-    function = 'kb*T*x_C*plog(x_C,tol) + (Ef_v*(1-x_C-x_O) + kb*T*(1-x_C-x_O)*plog(1-x_C-x_O,tol)) + (Ef_v*x_O + kb*T*x_O*plog(x_O,tol))'
+    function = 'kb*T*x_C*plog(x_C,tol)
+    + (Ef_v*(1-x_C-x_O) + kb*T*(1-x_C-x_O)*plog(1-x_C-x_O,tol))
+    + (Ef_v*x_O + kb*T*x_O*plog(x_O,tol))
+    + (Ef_v*x_CO + kb*T*x_CO*plog(x_CO,tol))'
     derivative_order = 2
     #outputs = exodus
   [../]
@@ -232,10 +236,10 @@
   [./free_energy_g]
     type = DerivativeParsedMaterial
     f_name = f_g
-    args = 'x_O x_C'
+    args = 'x_O x_C x_CO'
     constant_names = 'A'
     constant_expressions = '10.0'
-    function = 'A/2.0 * ((0.2 - x_O)^2 + x_C^2)'
+    function = 'A/2.0 * ((0.2 - x_O)^2 + x_C^2 +(0.2 - x_CO)^2)'
     derivative_order = 2
     #outputs = exodus
   [../]
@@ -245,8 +249,8 @@
     f_name = f_loc
     constant_names = 'W'
     constant_expressions = '10.0' #10 for Ef_v=4; 20 for Ef_v=8
-    args = 'x_C x_O eta'
-    material_property_names = 'h(eta) g(eta) f_g(x_O,x_C) f_f(x_C,x_O)'
+    args = 'x_C x_O x_CO eta'
+    material_property_names = 'h(eta) g(eta) f_g(x_O,x_C,x_CO) f_f(x_C,x_O,x_CO)'
     function = 'h * f_g + (1 - h) * f_f + W * g'
     derivative_order = 2
     #outputs = exodus
@@ -254,12 +258,13 @@
   [./vac_conc]
     type = ParsedMaterial
     f_name = V
-    args = 'x_C x_O'
+    args = 'x_C x_O x_CO'
     material_property_names = 'h(eta)'
-    function = '(1-h) * (1-x_C-x_O)'
+    function = '(1-h) * (1-x_C-x_O-x_CO)'
   [../]
 []
 
+#------------------------------------------------------------------------------#
 [BCs]
   [./x_O_right]
     type = PresetBC
@@ -268,6 +273,7 @@
     boundary = right
   [../]
 []
+
 #------------------------------------------------------------------------------#
 [Preconditioning]
   [./SMP]
