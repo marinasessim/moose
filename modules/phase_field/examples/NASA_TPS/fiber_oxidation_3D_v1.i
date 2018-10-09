@@ -9,12 +9,23 @@
 [Mesh]
   # length scale -> microns
   type = GeneratedMesh
-  dim = 2
-  xmax = 5
+  dim = 3
+  xmin = -0.5
+  xmax = 0.5
+  nx = 10
+
+  ymin = -0.5
   ymax = 0.5
-  nx = 50
-  ny = 5
-  uniform_refine = 2
+  ny = 10
+
+  zmin = 0
+  zmax = 5
+  nz = 50
+
+  uniform_refine = 1
+  elem_type = HEX8
+
+  parallel_type = DISTRIBUTED
 []
 
 #------------------------------------------------------------------------------#
@@ -83,46 +94,75 @@
 []
 
 #------------------------------------------------------------------------------#
-# Coordinates for bounding box IC
-[GlobalParams]
-  x1 = 0
-  x2 = 4.0
-  y1 = 0
-  y2 = 0.2
+[Functions]
+  # Radius for cap semi-sphere
+  # Height without the cap
+  [./func_O2]
+    type = ParsedFunction
+    vars = 'h R invalue outvalue'
+    vals = '4 0.2 1e-4 0.209'
+    value = 'if((z<h & sqrt(x^2+y^2)<R), invalue, outvalue)'
+    #if(z>=h & sqrt(x^2+y^2+(z-h)^2)<R, invalue, outvalue)
+  [../]
+
+  [./func_C]
+    type = ParsedFunction
+    vars = 'h R invalue outvalue'
+    vals = '4 0.2 0.99 1e-4'
+    value = 'if((z<h & sqrt(x^2+y^2)<R), invalue, outvalue)'
+  [../]
+
+  [./func_CO2]
+    type = ParsedFunction
+    vars = 'h R invalue outvalue'
+    vals = '4 0.2 1e-4 3e-4'
+    value = 'if((z<h & sqrt(x^2+y^2)<R), invalue, outvalue)'
+  [../]
+
+  [./func_eta]
+    type = ParsedFunction
+    vars = 'h R invalue outvalue'
+    vals = '4 0.2 0 1'
+    value = 'if((z<h & sqrt(x^2+y^2)<R), invalue, outvalue)'
+  [../]
 []
 
 #------------------------------------------------------------------------------#
 [ICs]
   # O2
   [./IC_x_O2]
-    type = BoundingBoxIC
+    type = FunctionIC
+    function = func_O2
     variable = x_O2
-    inside = 1e-4
-    outside = 0.209
+    #invalue = 1e-4
+    #outvalue = 0.209
   [../]
 
   # C
   [./IC_x_C]
-    type = BoundingBoxIC
+    type = FunctionIC
+    function = func_C
     variable = x_C
-    inside = 0.99
-    outside = 1e-4
+    #invalue = 0.99
+    #outvalue = 1e-4
   [../]
 
   # CO2
   [./IC_x_CO2]
-    type = BoundingBoxIC
+    type = FunctionIC
+    function = func_CO2
     variable = x_CO2
-    inside = 1e-4
-    outside = 3e-4
+    #invalue = 1e-4
+    #outvalue = 3e-4
   [../]
 
   # eta
   [./IC_eta]
-    type = BoundingBoxIC
+    type = FunctionIC
+    function = func_eta
     variable = eta
-    inside = 0.0
-    outside = 1.0
+    #invalue = 0.0
+    #outvalue = 1.0
   [../]
 []
 
@@ -318,7 +358,9 @@
     type = PresetBC
     variable = x_O2
     value = 0.209
-    boundary = top
+    boundary = 'left'
+    # z axis coming out of the screen
+    # front, back; left, right; top, bottom
   [../]
 #   [./x_CO2_top]
 #     type = PresetBC
@@ -356,11 +398,11 @@
   dtmax = 0.1
   dtmin = 1e-12
 
-  end_time = 2
+  end_time = 1
 
   [./Adaptivity]
-    max_h_level = 3
-    coarsen_fraction = 0.1
+    max_h_level = 4
+    coarsen_fraction = 0.2
     refine_fraction = 0.8
   [../]
 
@@ -413,7 +455,7 @@
   exodus = true
   csv = true
   perf_graph = true
-  file_base = ./oxidation_2D_v3/fiber_oxidation_2D_v3_out
+  file_base = ./oxidation_3D_v1/fiber_oxidation_3D_v1_out
 []
 
 #------------------------------------------------------------------------------#

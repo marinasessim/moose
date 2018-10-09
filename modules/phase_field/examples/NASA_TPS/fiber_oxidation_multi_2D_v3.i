@@ -2,7 +2,7 @@
 # C, O2, CO2, and CO
 # 2 phases: solid and gas
 # Phase-field action
-# Status: NOT WORKING
+# Status: WORKING
 #------------------------------------------------------------------------------#
 
 #------------------------------------------------------------------------------#
@@ -15,6 +15,7 @@
   nx = 50
   ny = 5
   uniform_refine = 2
+  elem_type = QUAD4
 []
 
 #------------------------------------------------------------------------------#
@@ -33,8 +34,8 @@
 [AuxKernels]
   [./f_dens_aux]
     type = TotalFreeEnergy
-    interfacial_vars = 'x_C x_O x_CO x_CO2'
-    kappa_names = 'kappa_C kappa_O kappa_CO kappa_CO2'
+    interfacial_vars = 'x_C x_O2 x_CO x_CO2'
+    kappa_names = 'kappa_C kappa_O2 kappa_CO kappa_CO2'
     f_name = f_loc
     variable = f_dens
   [../]
@@ -54,14 +55,14 @@
         kappa = kappa_C
         free_energy = f_loc
         mobility = M_C
-        args = 'x_O x_CO x_CO2 eta'
+        args = 'x_O2 x_CO x_CO2 eta'
       [../]
 
-      [./x_O]
+      [./x_O2]
         solve_type = FORWARD_SPLIT
-        kappa = kappa_O
+        kappa = kappa_O2
         free_energy = f_loc
-        mobility = M_O
+        mobility = M_O2
         args = 'x_C x_CO x_CO2 eta'
       [../]
 
@@ -70,15 +71,15 @@
         kappa = kappa_CO
         free_energy = f_loc
         mobility = M_CO
-        args = 'x_O x_C x_CO2 eta'
+        args = 'x_O2 x_C x_CO2 eta'
       [../]
 
       [./x_CO2]
         solve_type = FORWARD_SPLIT
-        kappa = kappa_O
+        kappa = kappa_CO2
         free_energy = f_loc
         mobility = M_CO2
-        args = 'x_O x_C x_CO eta'
+        args = 'x_O2 x_C x_CO eta'
       [../]
     [../]
 
@@ -87,7 +88,7 @@
         kappa = kappa_eta
         mobility = L
         free_energy = f_loc
-        args = 'x_C x_O x_CO x_CO2'
+        args = 'x_C x_O2 x_CO x_CO2'
       [../]
     [../]
   [../]
@@ -105,11 +106,11 @@
 #------------------------------------------------------------------------------#
 [ICs]
   # O
-  [./IC_x_O]
+  [./IC_x_O2]
     type = BoundingBoxIC
-    variable = x_O
-    inside = 0.0
-    outside = 0.2
+    variable = x_O2
+    inside = 1e-4
+    outside = 0.209
   [../]
 
   # C
@@ -117,21 +118,23 @@
     type = BoundingBoxIC
     variable = x_C
     inside = 0.99
-    outside = 0.0
+    outside = 1e-4
   [../]
 
   # CO
   [./IC_x_CO]
-    type = ConstantIC
+    type = BoundingBoxIC
     variable = x_CO
-    value = 0.0
+    inside = 1e-4
+    outside = 1e-4
   [../]
 
   # CO2
   [./IC_x_CO2]
-    type = ConstantIC
+    type = BoundingBoxIC
     variable = x_CO2
-    value = 0.0
+    inside = 1e-4
+    outside = 1e-4
   [../]
 
   # eta
@@ -149,14 +152,14 @@
   [./recomb_C]
     type = Recombination
     variable = x_C # Reactant 1
-    v = x_O # Reactant 2
-    mob_name = R_O # Reaction Rate (negative)
-  [../]
-  [./recomb_O]
-    type = Recombination
-    variable = x_O # Reactant 1
-    v = x_C # Reactant 2
+    v = x_O2 # Reactant 2
     mob_name = R_C # Reaction Rate (negative)
+  [../]
+  [./recomb_O2]
+    type = Recombination
+    variable = x_O2 # Reactant 1
+    v = x_C # Reactant 2
+    mob_name = R_O2 # Reaction Rate (negative)
   [../]
 
   # Products: Use Production kernel
@@ -164,14 +167,14 @@
     type = Production
     variable = x_CO # Product
     v = x_C # Reactant 1
-    w = x_O # Reactant 2
+    w = x_O2 # Reactant 2
     mob_name = P_CO # Reaction rate (positive)
   [../]
   [./prod_CO2]
     type = Production
     variable = x_CO2 # Product
     v = x_C # Reactant 1
-    w = x_O # Reactant 1
+    w = x_O2 # Reactant 2
     mob_name = P_CO2 # Reaction rate (positive)
   [../]
 []
@@ -179,13 +182,13 @@
 #------------------------------------------------------------------------------#
 [Materials]
   #----------------------------------------------------------------------------#
-  [./R_O] # Reactant
+  [./R_O2] # Reactant
     type = DerivativeParsedMaterial
-    f_name = R_O
-    args = 'x_O x_C'
+    f_name = R_O2
+    args = 'x_O2 x_C'
     constant_names = 'L'
-    constant_expressions = '-15'
-    function = 'if(x_O<0.0,0,if(x_C<0.0,0,L))'
+    constant_expressions = '-7.5'
+    function = 'if(x_O2<0.0,0,if(x_C<0.0,0,L))'
     derivative_order = 1
     outputs = exodus
   [../]
@@ -193,10 +196,10 @@
   [./R_C] # Reactant
     type = DerivativeParsedMaterial
     f_name = R_C
-    args = 'x_O x_C'
+    args = 'x_O2 x_C'
     constant_names = 'L'
-    constant_expressions = '-15'
-    function = 'if(x_O<0.0,0,if(x_C<0.0,0,L))'
+    constant_expressions = '-10'
+    function = 'if(x_O2<0.0,0,if(x_C<0.0,0,L))'
     derivative_order = 1
     outputs = exodus
   [../]
@@ -204,10 +207,10 @@
   [./P_CO] # Product
     type = DerivativeParsedMaterial
     f_name = P_CO
-    args = 'x_O x_C'
+    args = 'x_O2 x_C'
     constant_names = 'L'
-    constant_expressions = '15'
-    function = 'if(x_O<0.0,0,if(x_C<0.0,0,L))'
+    constant_expressions = '5'
+    function = 'if(x_O2<0.0,0,if(x_C<0.0,0,L))'
     derivative_order = 1
     outputs = exodus
   [../]
@@ -215,10 +218,10 @@
   [./P_CO2] # Product
     type = DerivativeParsedMaterial
     f_name = P_CO2
-    args = 'x_O x_C'
+    args = 'x_O2 x_C'
     constant_names = 'L'
-    constant_expressions = '15'
-    function = 'if(x_O<0.0,0,if(x_C<0.0,0,L))'
+    constant_expressions = '5'
+    function = 'if(x_O2<0.0,0,if(x_C<0.0,0,L))'
     derivative_order = 1
     outputs = exodus
   [../]
@@ -249,19 +252,19 @@
 
   #----------------------------------------------------------------------------#
   # O
-  [./mobility_O]
+  [./mobility_O2]
     type = DerivativeParsedMaterial
-    f_name = M_O
+    f_name = M_O2
     material_property_names = h(eta)
     constant_names = 'M_g M_f'
     constant_expressions = '100 1'
     function = 'M_g'
     outputs = exodus
-    output_properties = M_O
+    output_properties = M_O2
   [../]
-  [./kappa_O]
+  [./kappa_O2]
     type = GenericConstantMaterial
-    prop_names  = 'kappa_O'
+    prop_names  = 'kappa_O2'
     prop_values = '0.5e-2'
   [../]
 
@@ -272,7 +275,7 @@
     f_name = M_C
     material_property_names = h(eta)
     constant_names = 'M_g M_f'
-    constant_expressions = '0.001 1' #M_f = 0.1
+    constant_expressions = '100 1' #M_f = 0.1
     function = 'M_f'
     outputs = exodus
     output_properties = M_C
@@ -324,9 +327,9 @@
   [./vac_conc_mat] # Vacancy concentration in solid phase
     type = ParsedMaterial
     f_name = vac_conc
-    args = 'x_C x_O x_CO x_CO2'
+    args = 'x_C x_O2 x_CO x_CO2'
     material_property_names = 'h(eta)'
-    function = '(1-h) * (1-x_C-x_O-x_CO-x_CO2)'
+    function = '(1-h) * (1-x_C-x_O2-x_CO-x_CO2)'
     outputs = exodus
     output_properties = vac_conc
   [../]
@@ -336,15 +339,16 @@
   [./free_energy_s]
     type = DerivativeParsedMaterial
     f_name = f_s
-    args = 'x_C x_O x_CO x_CO2'
+    args = 'x_C x_O2 x_CO x_CO2'
     constant_names = 'Ef_v kb T tol'
     constant_expressions = '4.0 8.6173303e-5 1000.0 1e-4'
 
-    material_property_names = 'vac_conc(x_C,x_O,x_CO,x_CO2)'
+    # NEVER EVER USE THE MATERIAL FOR VAC CONC
+    # Parsed material vs. Derivi
 
     function  = 'kb*T*x_C*plog(x_C,tol)
-              + (Ef_v*vac_conc + kb*T*vac_conc*plog(vac_conc,tol))
-              + (Ef_v*x_O + kb*T*x_O*plog(x_O,tol))
+              + (Ef_v*(1-x_C-x_O2-x_CO-x_CO2) + kb*T*(1-x_C-x_O2-x_CO-x_CO2)*plog((1-x_C-x_O2-x_CO-x_CO2),tol))
+              + (2*Ef_v*x_O2 + kb*T*x_O2*plog(x_O2,tol))
               + (2*Ef_v*x_CO + kb*T*x_CO*plog(x_CO,tol))
               + (2*Ef_v*x_CO2 + kb*T*x_CO2*plog(x_CO2,tol))'
 
@@ -357,14 +361,14 @@
   [./free_energy_g]
     type = DerivativeParsedMaterial
     f_name = f_g
-    args = 'x_O x_C x_CO x_CO2'
-    constant_names = 'A_O A_C A_CO A_CO2'
-    constant_expressions = '10.0 10.0 10.0 10.0'
+    args = 'x_O2 x_C x_CO x_CO2'
+    constant_names =        'A_O2   A_C   A_CO  A_CO2   O2_eq   C_eq   CO_eq   CO2_eq'
+    constant_expressions =  '1.0   20.0  1.0  1.0    0.209   0.0    3e-4    3e-4'
 
-    function  ='A_O/2.0 * (0.2-x_O)^2
-              + A_C/2.0 * x_C^2
-              + A_CO/2.0 * (0.1-x_CO)^2
-              + A_CO2/2.0 * (0.1-x_CO2)^2'
+    function  ='A_O2/2.0 * (O2_eq - x_O2)^2
+              + A_C/2.0 * (C_eq - x_C)^2
+              + A_CO/2.0 * (CO_eq - x_CO)^2
+              + A_CO2/2.0 * (CO2_eq - x_CO2)^2'
 
     derivative_order = 2
     #outputs = exodus
@@ -377,8 +381,8 @@
     f_name = f_loc
     constant_names = 'W'
     constant_expressions = '10.0' #10 for Ef_v=4; 20 for Ef_v=8
-    args = 'x_C x_O x_CO eta'
-    material_property_names = 'h(eta) g(eta) f_g(x_O,x_C,x_CO,x_CO2) f_s(x_C,x_O,x_CO,x_CO2)'
+    args = 'x_C x_O2 x_CO x_CO2 eta'
+    material_property_names = 'h(eta) g(eta) f_g(x_O2,x_C,x_CO,x_CO2) f_s(x_C,x_O2,x_CO,x_CO2)'
 
     function = 'h*f_g +(1-h)*f_s +W*g'
 
@@ -389,11 +393,11 @@
 
 #------------------------------------------------------------------------------#
 [BCs]
-  [./x_O_right]
+  [./x_O2_top]
     type = PresetBC
-    variable = x_O
-    value = 0.2
-    boundary = right
+    variable = x_O2
+    value = 0.209
+    boundary = top
   [../]
 []
 
@@ -418,28 +422,29 @@
   l_max_its = 10
   l_tol = 1.0e-4
 
-  nl_max_its = 30
+  nl_max_its = 20
   nl_rel_tol = 1.0e-8
-  nl_abs_tol = 1.0e-10
+  #nl_abs_tol = 1.0e-10
 
-  dtmax = 1
+  dtmax = 1e-2
   dtmin = 1e-12
-
-  end_time = 2
+  end_time = 1
 
   [./Adaptivity]
-    max_h_level = 2
+    max_h_level = 3
     coarsen_fraction = 0.1
-    refine_fraction = 0.8
+    refine_fraction = 0.4
   [../]
 
   [./TimeStepper]
     type = IterationAdaptiveDT
-    dt = 1e-5
-    growth_factor = 1.1
+    dt = 1e-6
+    growth_factor = 10.0
     cutback_factor = 0.8
-    optimal_iterations = 8
+    optimal_iterations = 12
     iteration_window = 0
+
+
   [../]
 []
 
@@ -454,9 +459,9 @@
     variable = x_V
     execute_on = 'INITIAL TIMESTEP_END'
   [../]
-  [./total_O]
+  [./total_O2]
     type = ElementIntegralVariablePostprocessor
-    variable = x_O
+    variable = x_O2
     execute_on = 'INITIAL TIMESTEP_END'
   [../]
   [./total_C]
@@ -477,6 +482,10 @@
   [./dt]
     type = TimestepSize
   [../]
+  [./alive_time]
+    type = PerformanceData
+    event = ALIVE
+  [../]
 []
 
 #------------------------------------------------------------------------------#
@@ -484,7 +493,7 @@
   exodus = true
   csv = true
   perf_graph = true
-  file_base = ./multi_2D/fiber_oxidation_multi_2D_v2_out
+  file_base = ./multi_2D/fiber_oxidation_multi_2D_v3_out
 []
 
 #------------------------------------------------------------------------------#
